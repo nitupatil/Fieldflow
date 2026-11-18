@@ -1,40 +1,42 @@
-# FieldFlow CRM
+# FieldFlow — Daily Water Jar CRM
 
-Responsive sales and field-visit CRM for desktop and mobile browsers.
+A simple, app-style CRM for calling shops and hotels, managing repeat water-jar purchase orders, tracking deliveries and collecting payments. Designed for desktop and mobile browsers.
 
-## Live frontend
+## Open the application
 
-After enabling GitHub Pages on the `main` branch (root folder), open:
+Once GitHub Pages is enabled, the website will appear at **https://nitupatil.github.io/Fieldflow/**.
 
-**https://nitupatil.github.io/Fieldflow/**
+In the repository, open **Settings → Pages → Build and deployment**, choose **Deploy from a branch**, **main**, and **/(root)**. Save and let GitHub finish deployment. In Supabase Authentication → URL Configuration, allow this website URL for authentication redirects as needed.
 
-For this GitHub repository, go to **Settings → Pages → Build and deployment → Deploy from a branch → main → /(root) → Save**.
+The application is a **static frontend** (index.html, styles.css, app.js); Supabase hosts authentication and the live business data. No build step is required.
 
-## Architecture
+## Everyday workflow
 
-- **Frontend:** Static HTML, CSS and JavaScript; mobile-first responsive layout with desktop sidebar and mobile bottom navigation
-- **CRM backend & login:** Supabase project `fieldflowpro` (project ref `pldwrbjolcytodqedrqc`), with PostgreSQL and Row Level Security
-- **Maps:** Leaflet + OpenStreetMap tiles, geolocation and directions links
-- **Product images:** Authenticated Supabase Edge Function `upload-product-image` → ImgBB. The image API key is retained server-side in Supabase Vault.
-- **No Node.js runtime or static-site build step** is required.
+1. **Call List** — add a shop, hotel or other lead, call them, record their response and optional call-back date.
+2. **Customers** — convert interested leads to customers and set a standing PO of jars, price and delivery weekdays.
+3. **Today's POs** — recurring orders automatically appear each scheduled day. Edit the day's quantity or price without changing future standing POs; create one-time POs manually.
+4. **Deliveries** — mark an order Pending → Out for delivery → Delivered, or cancel an unpaid order.
+5. **Collections** — record full or partial payments for individual POs and view balances.
+6. **Map** — locate shops with saved GPS coordinates. **History** shows previous water orders, call notes and earlier sales orders.
 
-## Pages setup
+### Daily repeat rules
 
-1. Enable GitHub Pages for `main` / `/(root)` in this repository's Settings → Pages.
-2. Verify `https://nitupatil.github.io/Fieldflow/` opens the login screen.
-3. In Supabase project **Authentication → URL Configuration**, add `https://nitupatil.github.io/Fieldflow/` to allowed Redirect URLs (and keep any other actively used application URL).
-4. Confirm **Authentication → Providers → Email** is configured and email confirmation is working.
-5. Create a workspace by signing up. Existing organizations and staff are separated using Supabase row-level security. Team invitations are generated in the Workspace Settings screen.
-6. Test the complete lead → quotation → order → invoice → payment flow with a test account before using it for financial records.
+- Default standing schedule: Monday through Saturday; choose weekdays for each customer.
+- Auto-generation: Supabase Cron runs at **00:10 Asia/Kolkata** (18:40 UTC) each day.
+- The dashboard can also prepare a date's standing orders manually.
+- A customer cannot have duplicate dated water POs; manual repeats skip dates that already have one.
+- Editing a dated PO does not modify the standing order; editing a standing plan affects future generation.
+- Supabase RLS restricts records to organization members.
 
-### Security
+## Security & architecture
 
-Do not commit ImgBB keys, Supabase `service_role` keys, Postgres passwords, OAuth secrets or private customer exports. The Supabase **publishable** key in `app.js` is public by design; Supabase RLS and server-side privilege checks enforce access. The ImgBB credential is never in the static frontend.
+Backend: Supabase project `fieldflowpro` (project ref `pldwrbjolcytodqedrqc`). Existing CRM tables are preserved and remain separate from `water_plans`, `water_orders` and `water_collections`.
 
-### Development
+The frontend contains only a **publishable Supabase key**. Never commit service role secrets, private credentials, ImgBB keys or customer exports. Supabase Vault holds the ImgBB credential.
 
-Edit `index.html`, `styles.css` or `app.js` and push to `main`. GitHub Pages republishes the site after a successful build.
+## Notes
 
-### Status
-
-This repository contains the CRM frontend. The business database and authenticated upload function are hosted on Supabase, **not** GitHub Pages. GitHub Pages cannot itself run PHP, Node.js or a private backend. The application requires internet access and a configured Supabase project.
+- GitHub Pages serves static files only; GitHub does **not** host the Supabase database or scheduler.
+- Map markers require latitude and longitude; use browser location only with permission.
+- This version is optimized for daily water-jar operations; other legacy CRM data and tables are retained but advanced screens are intentionally hidden.
+- Test with a real signed-in account before relying on the app for delivery or financial reporting.
