@@ -46,3 +46,13 @@ The frontend includes only a Supabase **publishable key**, never the service rol
 ### Before production use
 
 Run an authenticated end-to-end test: create product → add customer using map → save POS bill → print → record partial payment → mark delivered and enter empties → check customer jar and monetary balances. Verify the same sequence on mobile and desktop. Configure printed tax fields/registration details in accordance with applicable rules before treating receipts as statutory tax invoices.
+
+## Version 8 — Photo POS and customer ledgers
+
+- **Photo catalogue:** Upload JPG/PNG/WebP/GIF product images (up to 6 MB) from the Product editor. Admin/manager uploads are sent to authenticated Supabase Edge Function `upload-product-image`, which uses ImgBB with a server-held credential. The product record retains `image_url` and `image_host_id`; no key is present in the frontend.
+- **App-style POS:** Searchable picture tiles with tap-on-image and +/− quantity controls. A compact live cart stays visible at the bottom of mobile screens and alongside products on desktop. Individual bill rates are editable without changing product defaults.
+- **Bills:** Saved POS sales and daily water POs can be opened and printed. The Download action creates a standalone **HTML** receipt that can be opened in a browser and printed or saved as PDF using the system print dialog. The receipt includes items, customer, payment, balance and amount in words.
+- **Customer ledgers:** Accounts and customer details provide a ledger combining dated water POs, POS bills, their recorded payments, jar issues and empty-jar returns, with running outstanding amounts and jar counts. Ledgers can be printed or downloaded as CSV.
+- **Mobile usability:** Short photo tiles, larger tap targets, a fixed cart summary, and independent product-list scrolling. Some scrolling is still necessary for long product lists or histories.
+
+**Important:** Product photos live at ImgBB, and customer/business data lives in Supabase; the local HTML site is a frontend. End-to-end upload, POS payment, and receipt download should be checked using an actual signed-in manager account and your Android WebViewer. No real product photos have been uploaded during this code update.
