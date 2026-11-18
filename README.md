@@ -1,42 +1,48 @@
-# FieldFlow — Daily Water Jar CRM
+# FieldFlow Water — Orders · POS · Leads · Map · Accounts
 
-A simple, app-style CRM for calling shops and hotels, managing repeat water-jar purchase orders, tracking deliveries and collecting payments. Designed for desktop and mobile browsers.
+FieldFlow is a responsive web application for a daily water-jar delivery business. The GitHub repository hosts **static frontend files** and Supabase hosts all authenticated business records.
 
-## Open the application
+## App URL
 
-Once GitHub Pages is enabled, the website will appear at **https://nitupatil.github.io/Fieldflow/**.
+Once GitHub Pages is configured to publish branch `main` / `/(root)`:
 
-In the repository, open **Settings → Pages → Build and deployment**, choose **Deploy from a branch**, **main**, and **/(root)**. Save and let GitHub finish deployment. In Supabase Authentication → URL Configuration, allow this website URL for authentication redirects as needed.
+https://nitupatil.github.io/Fieldflow/
 
-The application is a **static frontend** (index.html, styles.css, app.js); Supabase hosts authentication and the live business data. No build step is required.
+Alternatively, the independently deployed application is at https://fieldflow-crm.hatchable.site (hosting visibility currently personal/private).
 
-## Everyday workflow
+## Five main modules
 
-1. **Call List** — add a shop, hotel or other lead, call them, record their response and optional call-back date.
-2. **Customers** — convert interested leads to customers and set a standing PO of jars, price and delivery weekdays.
-3. **Today's POs** — recurring orders automatically appear each scheduled day. Edit the day's quantity or price without changing future standing POs; create one-time POs manually.
-4. **Deliveries** — mark an order Pending → Out for delivery → Delivered, or cancel an unpaid order.
-5. **Collections** — record full or partial payments for individual POs and view balances.
-6. **Map** — locate shops with saved GPS coordinates. **History** shows previous water orders, call notes and earlier sales orders.
+1. **Orders** — dated daily water-jar POs, standing order schedules, one-time orders, delivery status, repeat yesterday, payment recording and printable receipts.
+2. **POS** — configurable product catalogue, default per-product prices and tax rates, editable line-item quantities and prices, server-validated totals, receipts with Indian rupees written in words, payment entry, delivery status and jar issuance.
+3. **Leads / Customers** — spreadsheet-style contacts, tap-to-call, call remarks, follow-ups, change Type from Lead to Customer and searchable customer selection for orders.
+4. **Map** — place/locality search, tap-to-pin location selection when adding contacts, nearby radius filtering, customers' pending jar counts and directions links. Pins work only when a location is saved. Uses OpenStreetMap + Photon place search (subject to external provider availability and fair-use limits).
+5. **Accounts** — outstanding water POs and POS bills, receipts, customer-wise unreturned jar balances and empty-jar returns. Admin/manager may add an opening jar balance.
 
-### Daily repeat rules
+## Operational rules
 
-- Default standing schedule: Monday through Saturday; choose weekdays for each customer.
-- Auto-generation: Supabase Cron runs at **00:10 Asia/Kolkata** (18:40 UTC) each day.
-- The dashboard can also prepare a date's standing orders manually.
-- A customer cannot have duplicate dated water POs; manual repeats skip dates that already have one.
-- Editing a dated PO does not modify the standing order; editing a standing plan affects future generation.
-- Supabase RLS restricts records to organization members.
+- A standing water PO generates a **dated order once per customer per day**; updating the daily PO does not change the standing schedule.
+- Supabase Cron triggers generation at **00:10 IST**; the Orders page can prepare a date manually.
+- **Deliver** captures empty jars returned and updates the jar ledger in the same database operation. Repeating the same delivery confirmation won't duplicate jar movements.
+- POS products can opt into **returnable jar tracking**. Per-bill jar quantities are snapshotted when a bill is saved.
+- Customer PO and POS invoices have **separate billing records** to avoid double charging. Their outstanding totals are combined in Accounts.
+- Bill amounts are recalculated on the server; direct changes to POS totals and collections are restricted by the database.
+- Generated POS receipts include subtotal, tax, total, amount in words, paid amount and balance.
+- Previously created CRM tables are preserved, even when their advanced screens are not shown.
+- All organization data and financial records use Supabase authentication, row security and scoped database functions.
 
-## Security & architecture
+## Architecture and deployment
 
-Backend: Supabase project `fieldflowpro` (project ref `pldwrbjolcytodqedrqc`). Existing CRM tables are preserved and remain separate from `water_plans`, `water_orders` and `water_collections`.
+- Frontend: `index.html`, `styles.css`, `app.js`, `manifest.webmanifest`, `icon.svg`
+- Backend: Supabase project `fieldflowpro` (`pldwrbjolcytodqedrqc`)
+- Database: `businesses`, `lead_activities`, `products`, `water_plans`, `water_orders`, `water_collections`, `pos_sales`, `pos_sale_items`, `pos_payments`, `jar_movements`
+- No Node server or static asset build step required.
+- To enable Pages: GitHub repository **Settings → Pages → Deploy from a branch → main → /(root)**.
+- Allow the final site URL in **Supabase Authentication → URL Configuration** as needed for authentication redirects.
 
-The frontend contains only a **publishable Supabase key**. Never commit service role secrets, private credentials, ImgBB keys or customer exports. Supabase Vault holds the ImgBB credential.
+### Security
 
-## Notes
+The frontend includes only a Supabase **publishable key**, never the service role secret. The supplied ImgBB credential is stored privately in Supabase Vault. Do not publish credentials, customer exports or payment information in Git.
 
-- GitHub Pages serves static files only; GitHub does **not** host the Supabase database or scheduler.
-- Map markers require latitude and longitude; use browser location only with permission.
-- This version is optimized for daily water-jar operations; other legacy CRM data and tables are retained but advanced screens are intentionally hidden.
-- Test with a real signed-in account before relying on the app for delivery or financial reporting.
+### Before production use
+
+Run an authenticated end-to-end test: create product → add customer using map → save POS bill → print → record partial payment → mark delivered and enter empties → check customer jar and monetary balances. Verify the same sequence on mobile and desktop. Configure printed tax fields/registration details in accordance with applicable rules before treating receipts as statutory tax invoices.
