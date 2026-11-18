@@ -109,3 +109,94 @@ button{min-height:40px}
  .actions button:not(.primary){display:none}
 }
 @media(max-width:360px){.order-facts{gap:8px}.quick-actions button{font-size:10px;padding:7px 8px}.date-nav input{max-width:145px}}
+/* FIELD FLOW WATER v6 — Five-section product and billing workspace */
+:root{--ff-blue:#2463df;--ff-border:#e1e9f2;--ff-dark:#112745}
+.logo{border-bottom:1px solid #ffffff10}
+.sidebar .nav-item{margin:5px 0;padding:13px 14px}
+.sidebar .nav-item.active{background:#315d91}
+.sidebar .nav-heading{padding-top:25px}
+.topbar{border-bottom:1px solid #dfe8f1}
+.page-intro h1{color:#1b3656}
+.panel-head h3{font-size:14px;letter-spacing:-.01em}
+.page-intro .actions{flex-shrink:0}
+.pos-toolbar{display:flex;gap:9px;padding:16px 18px;border-bottom:1px solid var(--ff-border)}
+.pos-line{display:grid;grid-template-columns:minmax(0,2.5fr) minmax(65px,.7fr) minmax(75px,.9fr) minmax(65px,.7fr) auto;gap:9px;align-items:end;padding:14px 0;border-bottom:1px solid #e7edf6}
+.pos-line .field{margin:0;min-width:0}
+.pos-line .field.full{grid-column:auto}
+.pos-line input,.pos-line select{background:#fbfcff;border:1px solid #dce6f2;border-radius:9px;padding:11px 9px;width:100%;font-size:16px!important}
+.pos-line .pos-remove{white-space:nowrap;margin-bottom:0}
+.pos-totals{background:#f5f8ff;border:1px solid #dfeafa;border-radius:13px;padding:16px 18px;margin:18px 0;color:#536781}
+.pos-totals>div{display:flex;justify-content:space-between;gap:8px;padding:7px 0;font-size:13px}
+.pos-totals strong{color:#1c3656}
+.pos-totals .pos-grand{font-weight:800;border-top:1px solid #dae5f4;border-bottom:1px solid #dae5f4;margin:6px 0;padding:11px 0;font-size:15px}
+.pos-totals .pos-grand strong{font-size:22px;color:#1258b7}
+.pos-totals small{display:block;margin-top:9px;font-size:11px;color:#6b7e94;line-height:1.6}
+.map-search-row{display:flex;gap:8px;padding:12px 14px;align-items:center}
+.map-search-row>.search{max-width:none;flex:1;min-width:0}
+.map-search-row>button{flex-shrink:0}
+.map-search-row select{min-width:76px}
+.map-suggestions{display:grid;gap:5px;padding:0 14px}
+.place-result{display:block;text-align:left;width:100%;padding:11px 13px;border:1px solid #dfe8f3;border-radius:9px;background:#fff;color:#37506d;font-weight:600;min-height:42px}
+.place-result:hover{background:#eaf2ff}
+.map-summary{margin:8px 14px 12px;border-radius:10px;padding:11px 14px;background:#f0f5ff;color:#476690;font-weight:700;font-size:12px}
+.map-list{border-top:1px solid var(--ff-border);max-height:290px;overflow:auto}
+.map-client{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:15px;padding:12px 17px;border-bottom:1px solid #eef2f8;font-size:12px}
+.map-client strong{color:#234b7e}
+.map-client small{display:block;color:#8b9bb0;margin-top:3px}
+.map-client button{font-size:11px;padding:7px 10px}
+.water-map-icon{border:0!important;background:transparent!important}
+.pin-count{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:3px solid white;border-radius:50% 50% 50% 5%;color:white;font-size:13px;font-weight:800;box-shadow:0 2px 11px #10345d44;transform:rotate(-45deg)}
+.location-picker-map{height:240px;width:100%;border-radius:12px;border:1px solid #dfe8f3;overflow:hidden;z-index:1}
+#locationSummary{display:block;background:#f3f7ff;padding:10px;border-radius:9px;line-height:1.5}
+.drawer-body .map-search-row{padding:0}
+.drawer-body .map-suggestions{padding:0}
+.lead-table th,.lead-table td{padding:13px 14px;vertical-align:middle}
+.lead-table th{font-size:10px}
+.lead-table .cellselect{min-height:37px;min-width:120px;font-size:13px;padding:5px 7px;border-radius:7px;border:1px solid #dce5f3;background:white}
+.lead-table .quick-actions{flex-wrap:nowrap}
+.lead-table .quick-actions button{white-space:nowrap}
+.lead-table td strong{font-size:12px}
+.orders-grid .quick-actions{padding-top:9px}
+.map-panel{height:min(54vh,510px)}
+#pickMap.leaflet-container{z-index:1}
+#leafletMap.leaflet-container{z-index:1}
+.bill-items{display:grid;gap:5px}
+.bill-items .activity-row{margin:0}
+.bill-items .activity-row strong{font-size:12px}
+.card-actions .primary{min-width:80px}
+@media (min-width:1150px){
+ .orders-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .main{background:linear-gradient(135deg,#f8fbff,#f2f7ff)}
+ .content{padding-top:30px}
+ .stat{border-radius:15px}
+}
+@media (max-width:760px){
+ .topbar{height:59px}
+ .main{overflow-x:hidden}
+ .content{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+ .page-intro h1{font-size:21px}
+ .page-intro .actions{max-width:50%}
+ .page-intro .actions button{font-size:11px}
+ .pos-toolbar{padding:13px;flex-wrap:wrap}
+ .pos-line{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+ .pos-line .field.full{grid-column:1/-1}
+ .pos-line .pos-remove{grid-column:1/-1;width:max-content;margin-left:auto;font-size:11px}
+ .pos-line .field:not(.full) span{font-size:11px}
+ .map-search-row{flex-wrap:wrap;padding:11px}
+ .map-search-row>.search{flex-basis:100%;max-width:none}
+ .map-search-row>button{flex:1}
+ .map-search-row>select{flex:0}
+ .map-panel{height:48vh;min-height:280px}
+ .map-client{gap:8px;padding:10px 12px}
+ .map-client button{padding:6px}
+ .location-picker-map{height:255px}
+ .lead-table th,.lead-table td{padding:12px}
+ .lead-table th:first-child,.lead-table td:first-child{position:sticky;left:0;background:#fff;z-index:2;min-width:155px}
+ .lead-table th:first-child{background:#f9fbfe}
+ .lead-table .quick-actions{gap:4px}
+ .lead-table .quick-actions button{padding:7px 8px}
+ .pos-totals{padding:14px}
+ .pos-totals .pos-grand strong{font-size:20px}
+ .orders-grid{grid-template-columns:1fr}
+ .water-stats .stat{padding:14px 12px}
+}
