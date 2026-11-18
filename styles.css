@@ -340,3 +340,8 @@ button{min-height:40px}
  .pos-product-photo{aspect-ratio:2.1}
  .pos-product-grid .pos-product-price{font-size:12px}
 }
+.pos-image-tap{display:block;width:100%;border:0;background:transparent;padding:0;cursor:pointer;min-height:0;overflow:hidden;touch-action:manipulation}
+.pos-image-tap:focus-visible{outline:3px solid #347bf0;outline-offset:-3px}
+.pos-image-tap .pos-product-photo{transition:transform .14s ease}
+.pos-image-tap:active .pos-product-photo{transform:scale(.985)}
+@media(max-width:760px){.pos-image-tap{min-height:0}.pos-image-tap .pos-product-photo{width:100%}}
