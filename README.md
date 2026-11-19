@@ -69,3 +69,19 @@ Run an authenticated end-to-end test: create product → add customer using map 
 ### End-to-end testing before real billing
 
 Sign in as an admin/manager and test: add a product photo, verify its display in POS, add a product to the cart, review bill and save, open a receipt, download/share/print PDF, record payment, issue an order for multiple days, then verify the customer's ledger. Repeat on your actual Kodular APK because Android WebViewer behavior can differ from Chrome. The printed bill remains a generic receipt and requires business/GST particulars to be a statutory tax invoice.
+
+## Version 10 — App-like POS, T-shaped accounts and Android PDF viewer
+
+- **POS** now shows only product image tiles, +/- quantities, a customer dropdown and a fixed **Review bill** action. Saved bill history was moved to **Accounts → Saved bills**.
+- **Accounts** includes three tabs: **Customer ledger**, **Saved bills**, and **Empty jars**. Customer financial ledgers show debit charges and credit payments in separate columns (T-account) with a closing balance. Jar movements show a separate pending-empty-jar balance.
+- **Android image selection:** Product editor has a visible file input and Choose image button. If Kodular WebViewer does not implement Android file chooser, use **Open product editor in Chrome** or paste a direct HTTPS image URL. HTML alone cannot add a missing native WebChromeClient chooser.
+- **PDF backup:** Bill PDFs upload to the **private Supabase Storage bucket** `fieldflow-bills` under `organization-uuid/{pos|water}/bill-uuid.pdf`. Storage RLS restricts access to active members of the matching organization. Generated signed links expire after 30 minutes.
+- **Print / download:** Chrome can print directly; Kodular can open the signed HTTPS PDF URL in the Android browser/PDF viewer using the WebViewStringChange → ActivityStarter bridge. This requires an updated Kodular project/APK; an older installed APK cannot gain native print support solely through HTML.
+- **Mobile:** POS uses an independently scrolling image grid and a fixed checkout panel within the viewport; Accounts lists and ledgers use controlled scrolling.
+- The exact available Supabase bucket capacity depends on the account plan; **1 GB is not guaranteed**.
+
+### Kodular Android blocks (Version 10)
+
+Add an **ActivityStarter** component: `Action = android.intent.action.VIEW`. In `WebViewer1.WebViewStringChange`, set `ActivityStarter1.DataUri = WebViewer1.WebViewString` and call `ActivityStarter1.StartActivity`. This opens the signed PDF or image-upload fallback URL externally. The website sends it via `window.Kodular.setWebViewString(url)`. For Android Back, call `WebViewer1.EvaluateJS("window.FieldFlowBack && window.FieldFlowBack();")`.
+
+A packaged AIA was generated in this ChatGPT session; it is not part of the GitHub frontend code. Import the updated AIA and build an APK in Kodular before testing print and uploads.
