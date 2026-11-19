@@ -85,3 +85,18 @@ Sign in as an admin/manager and test: add a product photo, verify its display in
 Add an **ActivityStarter** component: `Action = android.intent.action.VIEW`. In `WebViewer1.WebViewStringChange`, set `ActivityStarter1.DataUri = WebViewer1.WebViewString` and call `ActivityStarter1.StartActivity`. This opens the signed PDF or image-upload fallback URL externally. The website sends it via `window.Kodular.setWebViewString(url)`. For Android Back, call `WebViewer1.EvaluateJS("window.FieldFlowBack && window.FieldFlowBack();")`.
 
 A packaged AIA was generated in this ChatGPT session; it is not part of the GitHub frontend code. Import the updated AIA and build an APK in Kodular before testing print and uploads.
+
+## Version 11 — App-like POS and reliable receipt fallback
+
+- POS remains a dedicated product-photo selection screen, with the customer selector and Review button. Saved bill history is located under **Accounts → Saved bills**, not inside POS.
+- Product management is available through **Accounts → Manage products** and the small gear button on POS. Add/Edit product includes a full-surface native file input. Selecting an image uploads via the authenticated Supabase Edge Function to ImgBB and stores its URL/ID on the product row. An HTTPS image-link and **Open in Chrome** alternative are available.
+- Review bill displays **every selected item** with editable rate, + / − quantity buttons and × Remove. The subtotal, tax, grand total and amount in words update before confirmation. Saving is disabled when no items remain.
+- Customer accounts include a separate **Debit / Credit T-account** (bills vs receipts), and an **Empty jar ledger** showing issued, returned and outstanding jars.
+- Mobile POS is constrained to viewport height with an independently scrollable product grid and fixed customer/review controls; cards are not stretched to fill variable product content.
+- On a normal browser, Print requests the native print dialog directly; in Kodular Android WebViewer, the fallback saves the generated PDF to the private Supabase bucket `fieldflow-bills` and provides a temporary signed link plus Copy link / Close buttons. PDF storage is limited to approved PDF files and organization members.
+- **Kodular limitation:** an Android WebViewer needs native file chooser and PDF/print handlers for fully automatic Android UI. If a particular Kodular APK does not implement these callbacks, HTML/JavaScript cannot force native dialogs; use **Open in Chrome**, **Share PDF**, or the signed PDF link until the AIA is updated accordingly.
+
+The `fieldflow-bills` bucket is **private** (10 MB individual PDF cap in bucket settings); overall storage quota depends on the Supabase account plan, not the bucket's configuration.
+
+### Suggested validation
+Test in Chrome and inside the actual Kodular APK: add product photo, verify front-end tile, add item, increase/decrease/remove during review, save bill, visit Accounts → Saved bills, print/download PDF, open customer T-account, verify outstanding and jar returns.
