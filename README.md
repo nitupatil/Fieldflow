@@ -56,3 +56,16 @@ Run an authenticated end-to-end test: create product → add customer using map 
 - **Mobile usability:** Short photo tiles, larger tap targets, a fixed cart summary, and independent product-list scrolling. Some scrolling is still necessary for long product lists or histories.
 
 **Important:** Product photos live at ImgBB, and customer/business data lives in Supabase; the local HTML site is a frontend. End-to-end upload, POS payment, and receipt download should be checked using an actual signed-in manager account and your Android WebViewer. No real product photos have been uploaded during this code update.
+
+## Version 9 — Mobile POS, photo uploads, billing and repeat deliveries
+
+- Product editor supports image-gallery upload with preview; authenticated server-side ImgBB upload checks membership and admin/manager role, then saves the image URL and image ID on the same product row. Includes direct HTTPS image-link fallback when a Kodular WebViewer cannot launch a file picker.
+- Refreshed five-section UI uses inline SVG illustrations, responsive colorful cards and gentle reduced-motion-aware animations.
+- POS now opens a **review selected items** screen with quantities, rates, tax and total before the sale is committed.
+- Saved water POs and POS bills have receipt previews with Back/Close, Print, Download PDF and Share PDF. PDF export uses jsPDF v2.5.2; printing requests the browser/Android print flow. **Android Kodular WebViewer printing and file download depend on the WebViewer/native configuration**; use the Share PDF or open-in-browser fallback if the native print dialog does not appear.
+- Standing daily plans now allow start/end dates, weekday presets and optional Sundays. Each day's PO is editable independently. An existing water PO can also be repeated across a bounded date range without duplicating a customer's existing dated order.
+- No ImgBB API key or server credential is stored in the public frontend.
+
+### End-to-end testing before real billing
+
+Sign in as an admin/manager and test: add a product photo, verify its display in POS, add a product to the cart, review bill and save, open a receipt, download/share/print PDF, record payment, issue an order for multiple days, then verify the customer's ledger. Repeat on your actual Kodular APK because Android WebViewer behavior can differ from Chrome. The printed bill remains a generic receipt and requires business/GST particulars to be a statutory tax invoice.
