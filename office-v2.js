@@ -3,7 +3,7 @@
   "use strict";
   const SUPABASE_URL = "https://pldwrbjolcytodqedrqc.supabase.co";
   const SUPABASE_KEY = "sb_publishable_NvlCKo8LQFIi74V0FPgZ_Q_qT40YS77";
-  const $ = (s, root=document) => root.querySelector(s);
+  const $ = (s, root=document) => root.querySelector(s); const $ = (s, root=document) => [...root.querySelectorAll(s)];
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const money = n => "₹" + Number(n || 0).toLocaleString("en-IN",{maximumFractionDigits:2});
   let db, session, orgId, role, currentUser, page="dashboard", customerRows=[], ledgers=[], members=[], dateFrom="", dateTo="";
@@ -55,7 +55,7 @@
   }
   async function loadFinance(kind){
     const {data,error}=await db.from("finance_entries").select("*,finance_ledgers(name)").eq("organization_id",orgId).eq("entry_type",kind==="expenses"?"expense":"income").is("deleted_at",null).order("entry_date",{ascending:false});
-    if(error){$("#financeRows").innerHTML='<tr><td colspan="5" class="empty">Finance tables are not installed yet. Apply supabase/office_v2.sql.</td></tr>';return;}
+    if(error){$("#view-"+kind+" #financeRows").innerHTML='<tr><td colspan="5" class="empty">Finance tables are not installed yet. Apply supabase/office_v2.sql.</td></tr>';return;}
     $("#financeRows").innerHTML=(data||[]).map(x=>'<tr><td>'+esc(x.entry_date)+'</td><td>'+esc(x.description||"—")+'</td><td>'+esc(x.finance_ledgers?.name||"Unassigned")+'</td><td>'+money(x.amount)+'</td><td>'+esc(x.created_by===currentUser.id?"You":"Team member")+'</td></tr>').join("")||'<tr><td colspan="5" class="empty">No entries yet.</td></tr>';
   }
   async function financeForm(kind){
@@ -74,7 +74,7 @@
   async function loadActivity(){const {data,error}=await db.from("audit_logs").select("*").eq("organization_id",orgId).order("created_at",{ascending:false}).limit(100);$("#activityRows").innerHTML=error?'<tr><td colspan="4">Activity log unavailable for this role.</td></tr>':(data||[]).map(x=>'<tr><td>'+new Date(x.created_at).toLocaleString("en-IN")+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.entity)+'</td><td>'+esc(x.actor_id===currentUser.id?"You":"Team member")+'</td></tr>').join("")||'<tr><td colspan="4" class="empty">No activity recorded.</td></tr>';}
   document.addEventListener("click",ev=>{
     const nav=ev.target.closest("[data-page]");if(nav){go(nav.dataset.page);return;}
-    if(ev.target.closest("#addCustomer")){customerForm();return;}
+    if(ev.target.closest("#addCustomer")||ev.target.closest("#addCustomerQuick")){customerForm();return;}
     if(ev.target.closest("#addExpense")){financeForm("expense");return;}
     if(ev.target.closest("#addIncome")){financeForm("income");return;}
     if(ev.target.closest("#addNote")){addNote();return;}
@@ -87,7 +87,7 @@
   $("#showSignup").onclick=()=>{$("#loginForm").hidden=true;$("#signupForm").hidden=false;};
   $("#showLogin").onclick=()=>{$("#signupForm").hidden=true;$("#loginForm").hidden=false;};
   $("#logout").onclick=()=>db.auth.signOut();
-  $("#addCustomerQuick").onclick=()=>customerForm();$("#addExpenseQuick").onclick=()=>financeForm("expense");$("#addIncomeQuick").onclick=()=>financeForm("income");$("#addDataQuick").onclick=()=>go("data");
+  $("#addCustomerQuick").forEach(x=>x.onclick=()=>customerForm());$("#addExpenseQuick").forEach(x=>x.onclick=()=>financeForm("expense"));$("#addIncomeQuick").forEach(x=>x.onclick=()=>financeForm("income"));$("#addDataQuick").onclick=()=>go("data");
   $("#periodApply").onclick=()=>{dateFrom=$("#periodFrom").value;dateTo=$("#periodTo").value;loadDashboard();};
   $("#fileInput").onchange=async ev=>{const file=ev.target.files[0];if(!file)return;const path=orgId+"/library/"+crypto.randomUUID()+"/"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");const {error}=await db.storage.from("fieldflow-private").upload(path,file,{upsert:false});if(error){notice(error.message,true);return;}const type=file.type==="application/pdf"?"pdf":"image";const {error:dbErr}=await db.from("vault_items").insert({organization_id:orgId,item_type:type,title:file.name,folder:type==="pdf"?"PDFs":"Images",storage_path:path,mime_type:file.type,size_bytes:file.size,created_by:currentUser.id});if(dbErr)notice(dbErr.message,true);else{notice("File added to library.");loadVault();}ev.target.value="";};
   init();
