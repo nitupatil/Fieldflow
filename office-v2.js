@@ -69,8 +69,8 @@
   $("#pinLoginForm").onsubmit=async ev=>{
     ev.preventDefault();if(!selectedStaff)return;
     const pin=new FormData(ev.target).get("pin");
-    const {data,error}=await db.auth.signInWithPassword({email:selectedStaff.email,password:pin});
-    if(error){notice("Incorrect PIN. Please try again.",true);return;}await finishSignIn(data);
+    try{const result=await staffRequest({action:"login",userId:selectedStaff.id,pin});const {data,error}=await db.auth.setSession({access_token:result.session.access_token,refresh_token:result.session.refresh_token});if(error)throw error;await finishSignIn({session:data.session,user:data.user});}
+    catch(error){notice(error.message||"Incorrect PIN. Please try again.",true);}
   };
   $("#masterLogin").onclick=()=>{$("#staffPicker").hidden=true;$("#masterLoginForm").hidden=false;};
   $("#backToStaff").onclick=showAuth;$("#backToStaffMaster").onclick=showAuth;
