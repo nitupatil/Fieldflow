@@ -3,7 +3,8 @@
   "use strict";
   const SUPABASE_URL = "https://pldwrbjolcytodqedrqc.supabase.co";
   const SUPABASE_KEY = "sb_publishable_NvlCKo8LQFIi74V0FPgZ_Q_qT40YS77";
-  const $ = (s, root=document) => root.querySelector(s); const $ = (s, root=document) => [...root.querySelectorAll(s)];
+  const $ = (s, root=document) => root.querySelector(s);
+  const $$ = (s, root=document) => [...root.querySelectorAll(s)];
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const money = n => "₹" + Number(n || 0).toLocaleString("en-IN",{maximumFractionDigits:2});
   let db, session, orgId, role, currentUser, page="dashboard", customerRows=[], ledgers=[], members=[], dateFrom="", dateTo="";
