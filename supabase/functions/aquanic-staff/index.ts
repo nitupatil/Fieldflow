@@ -32,6 +32,8 @@ Deno.serve(async (req:Request) => {
       const userId = String(body.userId || "");
       const pin = String(body.pin || "");
       if (!userId || !pin) return reply({error:"Select a profile and enter your PIN."},400);
+      const {data:activeMember,error:activeError} = await admin.from("organization_members").select("user_id").eq("organization_id",ORG_ID).eq("user_id",userId).eq("active",true).maybeSingle();
+      if (activeError || !activeMember) return reply({error:"This Aquanic profile is inactive or unavailable."},403);
       const {data:userData,error:userError} = await admin.auth.admin.getUserById(userId);
       if (userError || !userData.user?.email) return reply({error:"Profile not found."},404);
       const verifier = createClient(url,pub,{auth:{persistSession:false,autoRefreshToken:false}});
