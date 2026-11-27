@@ -9,22 +9,78 @@
   let db, session, orgId, role, currentUser, page="dashboard", customerRows=[], ledgers=[], members=[], dateFrom="", dateTo="";
   const today = () => new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
   function notice(message, bad=false){ const n=$("#notice"); n.textContent=message; n.className="notice show"+(bad?" bad":""); setTimeout(()=>n.className="notice",3500); }
-  function showAuth(){ $("#authView").hidden=false; $("#appView").hidden=true; }
-  function showApp(){ $("#authView").hidden=true; $("#appView").hidden=false; $("#workspaceName").textContent=session?.user?.user_metadata?.company_name || "My workspace"; $("#userEmail").textContent=session?.user?.email||""; }
+  const ORG_ID = "a43a7998-0649-4807-8b08-d62beb3e7a0a";
+  const MASTER_EMAIL = "nitishbadak14@gmail.com";
+  const STAFF_FN = SUPABASE_URL + "/functions/v1/aquanic-staff";
+  let staffDirectory=[], selectedStaff=null;
+  async function staffRequest(body, token=""){
+    const headers={"Content-Type":"application/json","apikey":SUPABASE_KEY};
+    if(token)headers.Authorization="Bearer "+token;
+    const res=await fetch(STAFF_FN,{method:"POST",headers,body:JSON.stringify(body)});
+    const data=await res.json().catch(()=>({error:"Unexpected server response"}));
+    if(!res.ok)throw new Error(data.error||"Staff service unavailable");
+    return data;
+  }
+  function showAuth(){
+    $("#authView").hidden=false;$("#appView").hidden=true;
+    $("#staffPicker").hidden=false;$("#pinLoginForm").hidden=true;$("#masterLoginForm").hidden=true;$("#firstPinForm").hidden=true;
+    loadStaffDirectory();
+  }
+  function showApp(){
+    $("#authView").hidden=true;$("#appView").hidden=false;
+    $("#workspaceName").textContent="Aquanic";$("#userEmail").textContent=currentUser?.user_metadata?.full_name||currentUser?.email||"";
+    $("#manageStaff").hidden=currentUser?.email?.toLowerCase()!==MASTER_EMAIL;
+  }
+  async function loadStaffDirectory(){
+    const host=$("#staffDirectory");if(!host)return;host.innerHTML='<div class="empty">Loading staff profiles…</div>';
+    try{
+      const result=await staffRequest({action:"list"});staffDirectory=result.users||[];
+      host.innerHTML=staffDirectory.length?staffDirectory.map(u=>'<button type="button" class="staff-tile" data-staff="'+esc(u.id)+'"><span class="staff-avatar">'+esc((u.name||"?").slice(0,1).toUpperCase())+'</span><strong>'+esc(u.name)+'</strong><small>'+esc(u.role==="admin"?"Administrator":"Team member")+'</small></button>').join(""):'<div class="empty">No staff profiles found. Sign in as administrator to get started.</div>';
+    }catch(err){host.innerHTML='<div class="empty">Staff list could not load. Use administrator sign in.</div>';notice(err.message,true);}
+  }
+  function pickStaff(id){
+    selectedStaff=staffDirectory.find(u=>u.id===id);if(!selectedStaff)return;
+    $("#staffPicker").hidden=true;$("#pinLoginForm").hidden=false;$("#selectedStaffName").textContent=selectedStaff.name;
+    $("#pinLoginForm [name=pin]").value="";$("#pinLoginForm [name=pin]").focus();
+  }
+  async function finishSignIn(data){
+    session=data.session;currentUser=data.user||data.session?.user;
+    if(!session||!currentUser){notice("Sign in did not return a session.",true);return;}
+    await enter();
+  }
   async function init(){
     if(!window.supabase){notice("Could not load secure data service. Refresh this page.",true);return;}
     db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-    const {data:{session:s}}=await db.auth.getSession(); session=s;
-    if(session) await enter(); else showAuth();
-    db.auth.onAuthStateChange((_event,s)=>{session=s;if(s) setTimeout(enter,0);else showAuth();});
+    const {data:{session:s}}=await db.auth.getSession();
+    if(s)await db.auth.signOut({scope:"local"});
+    session=null;currentUser=null;showAuth();
   }
   async function enter(){
     currentUser=session.user;
-    const {data:membership,error}=await db.from("organization_members").select("organization_id,role,active,organizations(id,name,currency)").eq("user_id",currentUser.id).eq("active",true).limit(1).maybeSingle();
-    if(error||!membership){showAuth();notice(error?.message||"No active workspace membership found.",true);return;}
-    orgId=membership.organization_id;role=membership.role;$("#workspaceName").textContent=membership.organizations?.name||"FieldFlow Office";
-    $("#userEmail").textContent=currentUser.email||"";showApp();await loadDashboard();
+    const {data:membership,error}=await db.from("organization_members").select("organization_id,role,active,organizations(id,name,currency)").eq("user_id",currentUser.id).eq("organization_id",ORG_ID).eq("active",true).maybeSingle();
+    if(error||!membership){await db.auth.signOut({scope:"local"});showAuth();notice(error?.message||"This profile is not active for Aquanic.",true);return;}
+    orgId=membership.organization_id;role=membership.role;
+    if(currentUser.user_metadata?.must_change_pin===true){
+      $("#authView").hidden=false;$("#appView").hidden=true;$("#staffPicker").hidden=true;$("#pinLoginForm").hidden=true;$("#masterLoginForm").hidden=true;$("#firstPinForm").hidden=false;return;
+    }
+    showApp();await loadDashboard();
   }
+  $("#pinLoginForm").onsubmit=async ev=>{
+    ev.preventDefault();if(!selectedStaff)return;
+    const pin=new FormData(ev.target).get("pin");
+    const {data,error}=await db.auth.signInWithPassword({email:selectedStaff.email,password:pin});
+    if(error){notice("Incorrect PIN. Please try again.",true);return;}await finishSignIn(data);
+  };
+  $("#masterLogin").onclick=()=>{$("#staffPicker").hidden=true;$("#masterLoginForm").hidden=false;};
+  $("#backToStaff").onclick=showAuth;$("#backToStaffMaster").onclick=showAuth;
+  $("#masterLoginForm").onsubmit=async ev=>{ev.preventDefault();const v=Object.fromEntries(new FormData(ev.target));const {data,error}=await db.auth.signInWithPassword({email:v.email,password:v.password});if(error){notice(error.message,true);return;}await finishSignIn(data);};
+  $("#firstPinForm").onsubmit=async ev=>{ev.preventDefault();const v=Object.fromEntries(new FormData(ev.target));if(v.pin!==v.confirm){notice("PIN entries do not match.",true);return;}const {data,error}=await db.auth.updateUser({password:v.pin,data:{...currentUser.user_metadata,must_change_pin:false}});if(error){notice(error.message,true);return;}currentUser=data.user;session=(await db.auth.getSession()).data.session;notice("Your personal PIN has been saved.");showApp();await loadDashboard();};
+  $("#manageStaff").onclick=()=>modal("Add Aquanic staff member",'<form id="staffForm" class="form-grid"><label class="wide">Full name<input name="name" required minlength="2"></label><label class="wide">Login email<input name="email" type="email" required></label><label class="wide">Temporary PIN / password<input name="temporaryPin" type="password" minlength="6" required><small class="muted">They will be asked to change this on first sign-in.</small></label><div class="wide modal-actions"><button type="button" class="subtle" data-close>Cancel</button><button class="primary">Create staff profile</button></div></form>');
+  document.addEventListener("submit",async ev=>{
+    if(ev.target.id!=="staffForm")return;ev.preventDefault();
+    try{const values=Object.fromEntries(new FormData(ev.target));await staffRequest({action:"create",...values},session.access_token);closeModal();notice("Staff profile created. They can now select their name and sign in.");}
+    catch(err){notice(err.message,true);}
+  });
   async function rows(table, query){let q=db.from(table).select("*").eq("organization_id",orgId);if(query)q=query(q);const {data,error}=await q;if(error)throw error;return data||[];}
   async function loadDashboard(){
     try{
