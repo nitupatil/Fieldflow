@@ -133,6 +133,7 @@
   async function addNote(){modal("New note",'<form id="noteForm" class="form-grid"><label class="wide">Title<input name="title" required></label><label class="wide">Folder<input name="folder" value="Notes"></label><label class="wide">Note<textarea name="content" rows="8" required></textarea></label><div class="wide modal-actions"><button type="button" class="subtle" data-close>Cancel</button><button class="primary">Save note</button></div></form>');$("#noteForm").onsubmit=async ev=>{ev.preventDefault();const v=Object.fromEntries(new FormData(ev.target));Object.assign(v,{organization_id:orgId,item_type:"note",created_by:currentUser.id});const {error}=await db.from("vault_items").insert(v);if(error){notice(error.message,true);return;}closeModal();loadVault();};}
   async function loadActivity(){const {data,error}=await db.from("audit_logs").select("*").eq("organization_id",orgId).order("created_at",{ascending:false}).limit(100);$("#activityRows").innerHTML=error?'<tr><td colspan="4">Activity log unavailable for this role.</td></tr>':(data||[]).map(x=>'<tr><td>'+new Date(x.created_at).toLocaleString("en-IN")+'</td><td>'+esc(x.action)+'</td><td>'+esc(x.entity)+'</td><td>'+esc(x.actor_id===currentUser.id?"You":"Team member")+'</td></tr>').join("")||'<tr><td colspan="4" class="empty">No activity recorded.</td></tr>';}
   document.addEventListener("click",ev=>{
+    const staff=ev.target.closest("[data-staff]");if(staff){pickStaff(staff.dataset.staff);return;}
     const nav=ev.target.closest("[data-page]");if(nav){go(nav.dataset.page);return;}
     if(ev.target.closest("#addCustomer")||ev.target.closest("#addCustomerQuick")){customerForm();return;}
     if(ev.target.closest("#addExpense")){financeForm("expense");return;}
@@ -144,12 +145,8 @@
     const fileBtn=ev.target.closest("[data-file]");if(fileBtn){openVaultFile(fileBtn.dataset.file);return;}
     const tr=ev.target.closest("[data-customer]");if(tr){const c=customerRows.find(x=>x.id===tr.dataset.customer);if(c)modal(c.name,'<div class="profile-view"><p><b>Mobile</b> '+esc(c.phone||"—")+'</p><p><b>Contact</b> '+esc(c.contact_person||"—")+'</p><p><b>Location</b> '+esc(c.address||"—")+'</p><p><b>Jars</b> '+Number(c.jar_quantity||0)+'</p><p><b>Price / jar</b> '+money(c.jar_price??50)+'</p></div>');}
   });
-  $("#loginForm").onsubmit=async ev=>{ev.preventDefault();const f=new FormData(ev.target);const {error}=await db.auth.signInWithPassword({email:f.get("email"),password:f.get("password")});if(error)notice(error.message,true);};
-  $("#signupForm").onsubmit=async ev=>{ev.preventDefault();const f=new FormData(ev.target);const {error}=await db.auth.signUp({email:f.get("email"),password:f.get("password"),options:{data:{full_name:f.get("name"),company_name:f.get("company")}}});if(error)notice(error.message,true);else notice("Account created. Check your email if confirmation is enabled.");};
-  $("#showSignup").onclick=()=>{$("#loginForm").hidden=true;$("#signupForm").hidden=false;};
-  $("#showLogin").onclick=()=>{$("#signupForm").hidden=true;$("#loginForm").hidden=false;};
-  $("#logout").onclick=()=>db.auth.signOut();
-  $("#addCustomerQuick").forEach(x=>x.onclick=()=>customerForm());$("#addExpenseQuick").forEach(x=>x.onclick=()=>financeForm("expense"));$("#addIncomeQuick").forEach(x=>x.onclick=()=>financeForm("income"));$("#addDataQuick").onclick=()=>go("data");
+  $("#logout").onclick=async()=>{await db.auth.signOut({scope:"local"});session=null;currentUser=null;showAuth();};
+  $("#addDataQuick").onclick=()=>go("data");
   $("#periodApply").onclick=()=>{dateFrom=$("#periodFrom").value;dateTo=$("#periodTo").value;loadDashboard();};
   $("#fileInput").onchange=async ev=>{const file=ev.target.files[0];if(!file)return;const path=orgId+"/library/"+crypto.randomUUID()+"/"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");const {error}=await db.storage.from("fieldflow-private").upload(path,file,{upsert:false});if(error){notice(error.message,true);return;}const type=file.type==="application/pdf"?"pdf":"image";const {error:dbErr}=await db.from("vault_items").insert({organization_id:orgId,item_type:type,title:file.name,folder:type==="pdf"?"PDFs":"Images",storage_path:path,mime_type:file.type,size_bytes:file.size,created_by:currentUser.id});if(dbErr)notice(dbErr.message,true);else{notice("File added to library.");loadVault();}ev.target.value="";};
   init();
