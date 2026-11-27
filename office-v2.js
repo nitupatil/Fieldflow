@@ -58,7 +58,7 @@
   async function loadFinance(kind){
     const {data,error}=await db.from("finance_entries").select("*,finance_ledgers(name)").eq("organization_id",orgId).eq("entry_type",kind==="expenses"?"expense":"income").is("deleted_at",null).order("entry_date",{ascending:false});
     if(error){$("#view-"+kind+" #financeRows").innerHTML='<tr><td colspan="5" class="empty">Finance tables are not installed yet. Apply supabase/office_v2.sql.</td></tr>';return;}
-    $("#financeRows").innerHTML=(data||[]).map(x=>'<tr><td>'+esc(x.entry_date)+'</td><td>'+esc(x.description||"—")+'</td><td>'+esc(x.finance_ledgers?.name||"Unassigned")+'</td><td>'+money(x.amount)+'</td><td>'+esc(x.created_by===currentUser.id?"You":"Team member")+'</td></tr>').join("")||'<tr><td colspan="5" class="empty">No entries yet.</td></tr>';
+    $("#view-"+kind+" #financeRows").innerHTML=(data||[]).map(x=>'<tr><td>'+esc(x.entry_date)+'</td><td>'+esc(x.description||"—")+'</td><td>'+esc(x.finance_ledgers?.name||"Unassigned")+'</td><td>'+money(x.amount)+'</td><td>'+esc(x.created_by===currentUser.id?"You":"Team member")+'</td></tr>').join("")||'<tr><td colspan="5" class="empty">No entries yet.</td></tr>';
   }
   async function financeForm(kind){
     const {data}=await db.from("finance_ledgers").select("id,name").eq("organization_id",orgId).is("deleted_at",null).order("name");
