@@ -23,10 +23,21 @@ Deno.serve(async (req:Request) => {
       for (const m of members || []) {
         const {data:u,error:ue} = await admin.auth.admin.getUserById(m.user_id);
         if (ue || !u.user) continue;
-        users.push({id:m.user_id,name:profiles?.find((p:any)=>p.id===m.user_id)?.full_name || "Team member",email:u.user.email || "",role:m.role});
+        users.push({id:m.user_id,name:profiles?.find((p:any)=>p.id===m.user_id)?.full_name || "Team member",role:m.role});
       }
       users.sort((a,b)=>a.name.localeCompare(b.name));
       return reply({users});
+    }
+    if (body.action === "login") {
+      const userId = String(body.userId || "");
+      const pin = String(body.pin || "");
+      if (!userId || !pin) return reply({error:"Select a profile and enter your PIN."},400);
+      const {data:userData,error:userError} = await admin.auth.admin.getUserById(userId);
+      if (userError || !userData.user?.email) return reply({error:"Profile not found."},404);
+      const verifier = createClient(url,pub,{auth:{persistSession:false,autoRefreshToken:false}});
+      const {data:loginData,error:loginError} = await verifier.auth.signInWithPassword({email:userData.user.email,password:pin});
+      if (loginError || !loginData.session) return reply({error:"Incorrect PIN. Please try again."},401);
+      return reply({session:loginData.session,user:loginData.user});
     }
     if (body.action !== "create") return reply({error:"Unknown action"},400);
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i,"");
