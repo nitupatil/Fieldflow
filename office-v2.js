@@ -17,7 +17,7 @@
   const inRange = (d,from,to) => { const day=String(d||"").slice(0,10); return day && day >= from && day <= to; };
   const sum = rows => (rows||[]).reduce((n,x)=>n+Number(x.amount||0),0);
   const palette = ["#65d5dc","#9b9cf4","#f0b66e","#86d8a9","#e88fb2","#78b8ed","#c4a2f2","#d4d66d","#ef9a79"];
-  let db, session, currentUser, orgId, role, page="dashboard", staffDirectory=[], customers=[], orders=[], sales=[], saleItems=[], posPayments=[], waterCollections=[], products=[], financeEntries=[], ledgers=[], financeReady=false, activityRows=[], customerSearch="", expenseFilter="all", incomeTab="deposits", reportFrom=monthStart(), reportTo=today(), busy=false;
+  let db, session, currentUser, orgId, role, page="dashboard", staffDirectory=[], selectedStaffId="", customers=[], orders=[], sales=[], saleItems=[], posPayments=[], waterCollections=[], products=[], financeEntries=[], ledgers=[], financeReady=false, activityRows=[], customerSearch="", expenseFilter="all", incomeTab="deposits", reportFrom=monthStart(), reportTo=today(), poFrom="", poTo="", busy=false;
 
   function notify(message,bad=false){
     const el=$("#notice"); if(!el)return;
@@ -50,6 +50,7 @@
     });
   }
   function showAuth(){
+    selectedStaffId="";
     $("#authView").hidden=false;$("#appView").hidden=true;
     $("#staffPicker").hidden=false;$("#pinLoginForm").hidden=true;$("#masterLoginForm").hidden=true;$("#firstPinForm").hidden=true;
     loadStaffDirectory();
@@ -63,7 +64,7 @@
     }catch(err){host.innerHTML='<div class="empty-state">Staff list could not load.<br>Use administrator sign in.</div>';notify(err.message,true);}
   }
   function pickStaff(id){
-    const selected=staffDirectory.find(x=>x.id===id);if(!selected)return;
+    const selected=staffDirectory.find(x=>x.id===id);if(!selected)return;selectedStaffId=id;
     $("#staffPicker").hidden=true;$("#pinLoginForm").hidden=false;$("#selectedStaffName").textContent=selected.name;
     $("#pinLoginForm [name=pin]").value="";$("#pinLoginForm [name=pin]").focus();
   }
@@ -97,8 +98,7 @@
     $("#topUserChip").textContent=name;
   }
   $("#pinLoginForm").onsubmit=async ev=>{
-    ev.preventDefault();const selected=$("[data-staff].selected");
-    const id=selected?.dataset.staff || (staffDirectory.find(x=>x.name===$("#selectedStaffName").textContent)?.id);
+    ev.preventDefault();const id=selectedStaffId;
     if(!id){notify("Choose your profile again.",true);return;}
     const pin=new FormData(ev.target).get("pin");
     try{
@@ -205,7 +205,7 @@
     return '<div class="page-intro"><div><div class="page-kicker">PEOPLE & RELATIONSHIPS</div><h1>Customers</h1><p>One reliable record for every customer and delivery location.</p></div><div class="page-actions"><button class="primary" data-action="add-customer">＋ Add customer</button></div></div><section class="surface"><div class="surface-head"><h3>Customer directory <span class="status-pill">'+customers.length+' records</span></h3><div class="toolbar"><input class="search-box" id="customerSearch" value="'+esc(customerSearch)+'" placeholder="Search name, mobile or area"></div></div><div class="surface-body"><div class="list-stack">'+(filtered.length?filtered.map(c=>'<article class="record-card customer-card" data-customer="'+c.id+'"'+creatorStyle(c.created_by)+'><span class="staff-avatar" style="--creator-color:'+memberColor(c.created_by)+';background:linear-gradient(145deg,'+memberColor(c.created_by)+',#1b6683)">'+esc((c.name||"?").slice(0,1).toUpperCase())+'</span><div class="record-main"><div class="record-title">'+esc(c.name)+'</div><div class="record-meta">'+esc(c.phone||"No mobile")+' · '+esc(c.city||c.address||"Location not added")+'</div><div class="record-meta">'+creatorTag(c.created_by)+'</div></div><span class="small-button">Open</span></article>').join(""):'<div class="empty-state"><strong>No customers found</strong>Add a customer or try another search.</div>')+'</div></div></section>';
   }
   function renderOrders(){
-    const from=$("#poFrom")?.value||"",to=$("#poTo")?.value||"";
+    const from=poFrom,to=poTo;
     const list=orders.filter(o=>(!from||o.order_date>=from)&&(!to||o.order_date<=to)).sort((a,b)=>String(b.order_date).localeCompare(String(a.order_date)));
     const total=list.filter(x=>x.status!=="Cancelled").reduce((n,x)=>n+Number(x.total||Number(x.quantity||0)*Number(x.unit_price||0)),0);
     const paid=list.reduce((n,x)=>n+Number(x.collected_amount||0),0);
@@ -231,10 +231,10 @@
     return a.concat(b).sort((x,y)=>String(y.date).localeCompare(String(x.date)));
   }
   function renderIncome(){
-    if(!financeReady)return '<div class="page-intro"><div><div class="page-kicker">MONEY RECEIVED</div><h1>Income</h1><p>Sales collections are deposits; other income is recorded as revenue.</p></div></div>'+financeSetup();
-    const deposits=depositRows(),other=financeEntries.filter(x=>x.entry_type==="income").sort((a,b)=>String(b.entry_date).localeCompare(String(a.entry_date)));
+    const deposits=depositRows(),other=financeReady?financeEntries.filter(x=>x.entry_type==="income").sort((a,b)=>String(b.entry_date).localeCompare(String(a.entry_date))):[];
     const isDeposits=incomeTab==="deposits",list=isDeposits?deposits:other;
-    return '<div class="page-intro"><div><div class="page-kicker">MONEY RECEIVED</div><h1>Income</h1><p>Keep customer deposits separate from other business revenue.</p></div><div class="page-actions"><button class="primary" data-action="add-income">＋ Add other income</button></div></div><div class="stats-grid"><article class="metric-card"><div class="metric-label">Sales deposits</div><div class="metric-value">'+money(sum(deposits))+'</div><div class="metric-foot">Cash collected against POs and bills</div></article><article class="metric-card"><div class="metric-label">Other revenue</div><div class="metric-value">'+money(sum(other))+'</div><div class="metric-foot">Manual income entries</div></article><article class="metric-card"><div class="metric-label">Deposit records</div><div class="metric-value">'+deposits.length+'</div><div class="metric-foot">Customer payments</div></article><article class="metric-card"><div class="metric-label">Revenue records</div><div class="metric-value">'+other.length+'</div><div class="metric-foot">Other income entries</div></article></div><section class="surface"><div class="surface-head"><h3>'+(isDeposits?"Sales deposits":"Other revenue")+'</h3><div class="toolbar"><button class="small-button" data-action="income-tab" data-id="deposits">Sales deposits</button><button class="small-button" data-action="income-tab" data-id="revenue">Other income</button></div></div><div class="surface-body"><div class="list-stack">'+(list.length?list.map(x=>'<article class="record-card"'+creatorStyle(x.created_by)+'><div class="record-main"><div class="record-title">'+esc(isDeposits?x.customer:x.description)+'</div><div class="record-meta">'+dateText(isDeposits?x.date:x.entry_date)+' · '+esc(isDeposits?x.kind:(x.finance_ledgers?.name||"Revenue"))+(isDeposits?" · "+esc(x.method||"Cash"):"")+' · '+creatorTag(x.created_by)+'</div></div><div class="record-amount">'+money(x.amount)+'</div></article>').join(""):'<div class="empty-state"><strong>'+(isDeposits?"No deposits received yet":"No other revenue recorded")+'</strong>'+(isDeposits?"Payments recorded against POs and sales bills will appear here.":"Add a revenue entry to keep non-sales income visible.")+'</div>')+'</div></div></section>';
+    if(!financeReady&&!isDeposits)return '<div class="page-intro"><div><div class="page-kicker">MONEY RECEIVED</div><h1>Income</h1><p>Keep customer deposits separate from other business revenue.</p></div></div>'+financeSetup();
+    return '<div class="page-intro"><div><div class="page-kicker">MONEY RECEIVED</div><h1>Income</h1><p>Keep customer deposits separate from other business revenue.</p></div><div class="page-actions"><button class="primary" data-action="add-income" '+(financeReady?"":"disabled")+'>＋ Add other income</button></div></div><div class="stats-grid"><article class="metric-card"><div class="metric-label">Sales deposits</div><div class="metric-value">'+money(sum(deposits))+'</div><div class="metric-foot">Cash collected against POs and bills</div></article><article class="metric-card"><div class="metric-label">Other revenue</div><div class="metric-value">'+(financeReady?money(sum(other)):"—")+'</div><div class="metric-foot">Manual income entries</div></article><article class="metric-card"><div class="metric-label">Deposit records</div><div class="metric-value">'+deposits.length+'</div><div class="metric-foot">Customer payments</div></article><article class="metric-card"><div class="metric-label">Revenue records</div><div class="metric-value">'+(financeReady?other.length:"—")+'</div><div class="metric-foot">Other income entries</div></article></div><section class="surface"><div class="surface-head"><h3>'+(isDeposits?"Sales deposits":"Other revenue")+'</h3><div class="toolbar"><button class="small-button" data-action="income-tab" data-id="deposits">Sales deposits</button><button class="small-button" data-action="income-tab" data-id="revenue">Other income</button></div></div><div class="surface-body"><div class="list-stack">'+(list.length?list.map(x=>'<article class="record-card"'+creatorStyle(x.created_by)+'><div class="record-main"><div class="record-title">'+esc(isDeposits?x.customer:x.description)+'</div><div class="record-meta">'+dateText(isDeposits?x.date:x.entry_date)+' · '+esc(isDeposits?x.kind:(x.finance_ledgers?.name||"Revenue"))+(isDeposits?" · "+esc(x.method||"Cash"):"")+' · '+creatorTag(x.created_by)+'</div></div><div class="record-amount">'+money(x.amount)+'</div></article>').join(""):'<div class="empty-state"><strong>'+(isDeposits?"No deposits received yet":"No other revenue recorded")+'</strong>'+(isDeposits?"Payments recorded against POs and sales bills will appear here.":"Add a revenue entry to keep non-sales income visible.")+'</div>')+'</div></div></section>';
   }
   function renderReports(){
     const s=reportStats(reportFrom,reportTo);
@@ -407,13 +407,13 @@
     const id=form.dataset.id,o=orderById(id),v=Object.fromEntries(new FormData(form)),amount=Number(v.amount);
     if(!o||!(amount>0)||amount>Number(o.total||0)-Number(o.collected_amount||0))throw new Error("Enter an amount within the outstanding balance.");
     const {error}=await db.from("water_collections").insert({organization_id:orgId,business_id:o.business_id,order_id:o.id,amount,method:v.method||"Cash",reference:v.reference||null,notes:"PO deposit",created_by:currentUser.id});
-    if(error)throw error;closeModal();await loadWorkspace();go("income");incomeTab="deposits";notify("PO deposit recorded.");
+    if(error)throw error;closeModal();await loadWorkspace();incomeTab="deposits";go("income");notify("PO deposit recorded.");
   }
   async function saveSaleDeposit(form){
     const id=form.dataset.id,v=Object.fromEntries(new FormData(form)),amount=Number(v.amount),s=saleById(id);
     if(!s||!(amount>0)||amount>Number(s.total)-Number(s.paid_amount))throw new Error("Enter an amount within the outstanding bill balance.");
     const {error}=await db.rpc("fieldflow_pos_collect",{p_sale:id,p_amount:amount,p_method:v.method||"Cash",p_reference:v.reference||null});
-    if(error)throw error;closeModal();await loadWorkspace();go("income");incomeTab="deposits";notify("Sales deposit recorded.");
+    if(error)throw error;closeModal();await loadWorkspace();incomeTab="deposits";go("income");notify("Sales deposit recorded.");
   }
   async function saveFinance(form,kind){
     const v=Object.fromEntries(new FormData(form)),amount=Number(v.amount);
@@ -427,7 +427,7 @@
       if(payload.expense_category==="asset"&&!payload.asset_name)payload.asset_name=payload.description;
     }
     const {error}=await db.from("finance_entries").insert(payload);if(error)throw error;
-    closeModal();await loadWorkspace();go(kind==="expense"?"expenses":"income");if(kind==="income")incomeTab="revenue";notify(kind==="expense"?"Expense saved under your profile.":"Other revenue saved under your profile.");
+    closeModal();await loadWorkspace();if(kind==="income")incomeTab="revenue";go(kind==="expense"?"expenses":"income");notify(kind==="expense"?"Expense saved under your profile.":"Other revenue saved under your profile.");
   }
   async function repeatExpense(id){
     const x=financeEntries.find(e=>e.id===id);if(!x||x.expense_category!=="recurring")return;
@@ -472,8 +472,8 @@
       if(error)throw error;closeModal();await loadWorkspace();go("orders");notify("PO marked delivered.");return;
     }
     if(action==="income-tab"){incomeTab=id;go("income");return;}
-    if(action==="filter-pos"){go("orders");return;}
-    if(action==="clear-po-filter"){go("orders");return;}
+    if(action==="filter-pos"){poFrom=$("#poFrom")?.value||"";poTo=$("#poTo")?.value||"";if(poFrom&&poTo&&poFrom>poTo){notify("Choose a valid PO date range.",true);return;}go("orders");return;}
+    if(action==="clear-po-filter"){poFrom="";poTo="";go("orders");return;}
     if(action==="apply-report"){
       const f=$("#reportFrom").value,t=$("#reportTo").value;if(!f||!t||f>t){notify("Choose a valid date range.",true);return;}
       reportFrom=f;reportTo=t;go("reports");return;
