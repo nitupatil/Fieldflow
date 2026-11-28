@@ -260,13 +260,21 @@
     if(currentUser?.email?.toLowerCase()!==MASTER_EMAIL)return '<section class="surface"><div class="surface-body"><div class="empty-state"><strong>Administrator access required</strong>Only the master account can add staff profiles.</div></div></section>';
     return '<div class="page-intro"><div><div class="page-kicker">TEAM & ACCESS</div><h1>Team members</h1><p>Every customer, PO, sale and finance entry carries the creator’s colour.</p></div><div class="page-actions"><button class="primary" data-action="add-staff">＋ Add staff</button></div></div><section class="surface"><div class="surface-head"><h3>Active profiles</h3><small>'+staffDirectory.length+' members</small></div><div class="surface-body"><div class="list-stack">'+staffDirectory.map(u=>'<article class="record-card"'+creatorStyle(u.id)+'><span class="staff-avatar" style="background:linear-gradient(145deg,'+memberColor(u.id)+',#1b6683)">'+esc((u.name||"?").slice(0,1).toUpperCase())+'</span><div class="record-main"><div class="record-title">'+esc(u.name)+'</div><div class="record-meta">'+esc(u.role==="admin"?"Administrator":"Team member")+' · '+creatorTag(u.id)+'</div></div></article>').join("")+'</div></div></section>';
   }
+  function renderActivity(){
+    return '<div class="page-intro"><div><div class="page-kicker">ACTIVITY & ACCOUNTABILITY</div><h1>Activity log</h1><p>See recent changes and who recorded them across your Aquanic workspace.</p></div></div><section class="surface"><div class="surface-head"><h3>Recent activity</h3><small>Latest 150 records</small></div><div class="surface-body"><div id="activityContent" class="list-stack"><div class="empty-state">Loading activity…</div></div></div></section>';
+  }
   async function loadActivity(){
-    const host=$("#pageContent");if(!host)return;
-    const {data,error}=await db.from("audit_logs").select("*").eq("organization_id",orgId).order("created_at",{ascending:false}).limit(150);
-    if(error){host.insertAdjacentHTML("beforeend",'<section class="surface"><div class="surface-body"><div class="empty-state">Activity log is unavailable for this account.</div></div></section>');return;}
+    const host=$("#activityContent");if(!host)return;
+    const {data,error}=await db.from("audit_logs").select("id,actor_id,entity,action,created_at").eq("organization_id",orgId).order("created_at",{ascending:false}).limit(150);
+    if(!host.isConnected)return;
+    if(error){
+      console.warn("Aquanic activity log",error);
+      host.innerHTML='<div class="empty-state"><strong>Activity log is unavailable</strong>Your account could not read the audit log.</div>';
+      return;
+    }
     activityRows=data||[];
     const rows=activityRows.map(x=>'<article class="record-card"'+creatorStyle(x.actor_id)+'><div class="record-main"><div class="record-title">'+esc(x.action)+' · '+esc(x.entity)+'</div><div class="record-meta">'+timeText(x.created_at)+' · '+creatorTag(x.actor_id)+'</div></div></article>').join("");
-    host.insertAdjacentHTML("beforeend",'<section class="surface"><div class="surface-head"><h3>Recent activity</h3><small>Latest 150 records</small></div><div class="surface-body"><div class="list-stack">'+(rows||'<div class="empty-state">No activity recorded yet.</div>')+'</div></div></section>');
+    host.innerHTML=rows||'<div class="empty-state"><strong>No activity recorded yet</strong>New workspace activity will appear here.</div>';
   }
   function customerOptions(selected){
     return '<option value="">Choose a customer</option>'+customers.map(c=>'<option value="'+c.id+'" '+(c.id===selected?"selected":"")+'>'+esc(c.name)+' · '+esc(c.phone||"")+'</option>').join("");
