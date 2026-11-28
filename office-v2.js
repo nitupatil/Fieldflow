@@ -12,9 +12,9 @@
   const money = n => "₹" + Number(n || 0).toLocaleString("en-IN",{maximumFractionDigits:2});
   const today = () => new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
   const monthStart = () => today().slice(0,7) + "-01";
-  const dateText = d => d ? new Date(String(d).slice(0,10)+"T12:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) : "—";
+  const dateText = d => d ? new Date(String(d).length===10?String(d)+"T12:00:00":d).toLocaleDateString("en-IN",{timeZone:"Asia/Kolkata",day:"numeric",month:"short",year:"numeric"}) : "—";
   const timeText = d => d ? new Date(d).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}) : "—";
-  const inRange = (d,from,to) => { const day=String(d||"").slice(0,10); return day && day >= from && day <= to; };
+  const inRange = (d,from,to) => { if(!d)return false;const raw=String(d);const day=raw.length===10?raw:new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(raw));return day>=from&&day<=to; };
   const sum = rows => (rows||[]).reduce((n,x)=>n+Number(x.amount||0),0);
   const palette = ["#65d5dc","#9b9cf4","#f0b66e","#86d8a9","#e88fb2","#78b8ed","#c4a2f2","#d4d66d","#ef9a79"];
   let db, session, currentUser, orgId, role, page="dashboard", staffDirectory=[], selectedStaffId="", customers=[], orders=[], sales=[], saleItems=[], posPayments=[], waterCollections=[], products=[], financeEntries=[], ledgers=[], financeReady=false, activityRows=[], customerSearch="", expenseFilter="all", incomeTab="deposits", reportFrom=monthStart(), reportTo=today(), poFrom="", poTo="", busy=false;
@@ -233,7 +233,7 @@
   function renderIncome(){
     const deposits=depositRows(),other=financeReady?financeEntries.filter(x=>x.entry_type==="income").sort((a,b)=>String(b.entry_date).localeCompare(String(a.entry_date))):[];
     const isDeposits=incomeTab==="deposits",list=isDeposits?deposits:other;
-    if(!financeReady&&!isDeposits)return '<div class="page-intro"><div><div class="page-kicker">MONEY RECEIVED</div><h1>Income</h1><p>Keep customer deposits separate from other business revenue.</p></div></div>'+financeSetup();
+    if(!financeReady&&!isDeposits)return '<div class="page-intro"><div><div class="page-kicker">MONEY RECEIVED</div><h1>Income</h1><p>Keep customer deposits separate from other business revenue.</p></div></div>'+financeSetup()+'<div class="page-actions" style="margin-top:12px"><button class="outline-button" data-action="income-tab" data-id="deposits">← View sales deposits</button></div>';
     return '<div class="page-intro"><div><div class="page-kicker">MONEY RECEIVED</div><h1>Income</h1><p>Keep customer deposits separate from other business revenue.</p></div><div class="page-actions"><button class="primary" data-action="add-income" '+(financeReady?"":"disabled")+'>＋ Add other income</button></div></div><div class="stats-grid"><article class="metric-card"><div class="metric-label">Sales deposits</div><div class="metric-value">'+money(sum(deposits))+'</div><div class="metric-foot">Cash collected against POs and bills</div></article><article class="metric-card"><div class="metric-label">Other revenue</div><div class="metric-value">'+(financeReady?money(sum(other)):"—")+'</div><div class="metric-foot">Manual income entries</div></article><article class="metric-card"><div class="metric-label">Deposit records</div><div class="metric-value">'+deposits.length+'</div><div class="metric-foot">Customer payments</div></article><article class="metric-card"><div class="metric-label">Revenue records</div><div class="metric-value">'+(financeReady?other.length:"—")+'</div><div class="metric-foot">Other income entries</div></article></div><section class="surface"><div class="surface-head"><h3>'+(isDeposits?"Sales deposits":"Other revenue")+'</h3><div class="toolbar"><button class="small-button" data-action="income-tab" data-id="deposits">Sales deposits</button><button class="small-button" data-action="income-tab" data-id="revenue">Other income</button></div></div><div class="surface-body"><div class="list-stack">'+(list.length?list.map(x=>'<article class="record-card"'+creatorStyle(x.created_by)+'><div class="record-main"><div class="record-title">'+esc(isDeposits?x.customer:x.description)+'</div><div class="record-meta">'+dateText(isDeposits?x.date:x.entry_date)+' · '+esc(isDeposits?x.kind:(x.finance_ledgers?.name||"Revenue"))+(isDeposits?" · "+esc(x.method||"Cash"):"")+' · '+creatorTag(x.created_by)+'</div></div><div class="record-amount">'+money(x.amount)+'</div></article>').join(""):'<div class="empty-state"><strong>'+(isDeposits?"No deposits received yet":"No other revenue recorded")+'</strong>'+(isDeposits?"Payments recorded against POs and sales bills will appear here.":"Add a revenue entry to keep non-sales income visible.")+'</div>')+'</div></div></section>';
   }
   function renderReports(){
@@ -444,7 +444,7 @@
   }
   async function saveStaff(form){
     const v=Object.fromEntries(new FormData(form));
-    await staffRequest({action:"create",...v},session.access_token);
+    const {data:{session:active}}=await db.auth.getSession();if(!active?.access_token)throw new Error("Please sign in again before adding staff.");await staffRequest({action:"create",...v},active.access_token);
     closeModal();await loadStaffDirectory();go("staff");notify("Staff profile created. They can now select their name and sign in.");
   }
   async function handleAction(action,id,el){
