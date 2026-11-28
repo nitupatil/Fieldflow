@@ -1,6 +1,7 @@
--- FieldFlow Office v2 schema extension
+-- Aquanic Office v2 schema extension
 -- Review and run in Supabase SQL Editor for project pldwrbjolcytodqedrqc.
--- Existing operational tables and records are preserved.
+-- This file is NOT applied automatically by the GitHub Pages app.
+-- Existing customers, orders, sales, payments and audit records are preserved.
 
 alter table public.businesses
   add column if not exists jar_quantity integer not null default 0,
@@ -32,12 +33,35 @@ create table if not exists public.finance_entries (
   description text not null,
   entry_date date not null default current_date,
   business_id uuid references public.businesses(id),
+  expense_category text not null default 'operating' check (expense_category in ('operating','asset','recurring')),
+  recurrence_frequency text check (recurrence_frequency in ('weekly','monthly','yearly')),
+  recurrence_end_date date,
+  asset_name text,
   created_by uuid references auth.users(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
   deleted_by uuid references auth.users(id)
 );
+
+-- Make the script safe to rerun on a finance_entries table created by an earlier draft.
+alter table public.finance_entries
+  add column if not exists expense_category text not null default 'operating',
+  add column if not exists recurrence_frequency text,
+  add column if not exists recurrence_end_date date,
+  add column if not exists asset_name text;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'finance_entries_expense_category_check') then
+    alter table public.finance_entries add constraint finance_entries_expense_category_check
+      check (expense_category in ('operating','asset','recurring'));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'finance_entries_recurrence_frequency_check') then
+    alter table public.finance_entries add constraint finance_entries_recurrence_frequency_check
+      check (recurrence_frequency is null or recurrence_frequency in ('weekly','monthly','yearly'));
+  end if;
+end $$;
 
 create table if not exists public.vault_items (
   id uuid primary key default gen_random_uuid(),
@@ -54,9 +78,7 @@ create table if not exists public.vault_items (
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
   deleted_by uuid references auth.users(id),
-  constraint vault_item_content_or_file check (
-    item_type not in ('note','text') or content is not null
-  )
+  constraint vault_item_content_or_file check (item_type not in ('note','text') or content is not null)
 );
 
 create index if not exists businesses_org_customer_active_idx
@@ -121,6 +143,4 @@ create policy "FieldFlow organization file upload" on storage.objects
        and om.user_id = (select auth.uid()) and om.active = true)
 );
 
--- Audit records are append-only from the client. The existing audit_logs table
--- remains the source of truth for admin/manager review; no hard-delete policy is added.
 grant select, insert, update on public.finance_ledgers, public.finance_entries, public.vault_items to authenticated;
